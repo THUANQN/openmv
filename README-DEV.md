@@ -59,5 +59,6 @@
     - Commit and push
         - `$ git add . && git commit -m "<commit-message>"`
         - `$ git push` or `$ git push <remote-name> <branch-name>` (vd `$ git push orgin dev-thuanqn`)
+        - Hoặc có thể chuyển branch lên đầu mỗi lần push
         
 
