@@ -57,7 +57,7 @@
         - `$ git switch dev-thuanqn`
     - Develop source code   
     - Commit and push
-        - `$ git add . && git commit "<commit-message>"`
+        - `$ git add . && git commit -m "<commit-message>"`
         - `$ git push` or `$ git push <remote-name> <branch-name>` (vd `$ git push orgin dev-thuanqn`)
         
 
