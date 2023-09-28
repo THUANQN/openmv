@@ -51,6 +51,13 @@
     ```
   - Flash firmware (tìm hiểu sau)
 ### Cách thức tiếp cận để develop
-- Tạo branch mới 
-    - `$ git checkout -b dev-thuanqn`
-    
+- Hướng dẫn chung
+    - Tạo branch mới hoặc checkout/switch branch
+        - `$ git checkout -b dev-thuanqn`
+        - `$ git switch dev-thuanqn`
+    - Develop source code   
+    - Commit and push
+        - `$ git add . && git commit "<commit-message>"`
+        - `$ git push` or `$ git push <remote-name> <branch-name>` (vd `$ git push orgin dev-thuanqn`)
+        
+
