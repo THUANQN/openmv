@@ -227,6 +227,7 @@ btn_long_press_flag = 0
 btn_long_press_running = 0
 btn_press_timer_flag = 0
 btn_press_timer_running = 0
+global btn_press_timer_task
 btn_nb_click = 0
 # FUNCTIONS
 def btn_init():
@@ -266,6 +267,17 @@ def oled_show_dimension(d: float):
     WRITER.printstring("mm")
     OLED.show()
 
+def oled_show_area(d: float):
+    ''' OLED Show Area '''
+    OLED.fill(0)
+    WRITER.set_textpos(0, 0)
+    WRITER.printstring("A =")
+    WRITER.set_textpos(38, 0)
+    WRITER.printstring(str(d))
+    WRITER.set_textpos(85, 0)
+    WRITER.printstring("mm2")
+    OLED.show()
+
 def oled_show_ratio(d: float):
     ''' OLED Show Dimmension '''
     OLED.fill(0)
@@ -284,16 +296,25 @@ def oled_show(s: str):
 
 # SENSORS
 # DEFINES
-RANGE_MIN = min(cfg.RANGE1[0],cfg.RANGE1[0], cfg.RANGE1[0])
-RANGE_MAX = max(cfg.RANGE1[1],cfg.RANGE1[1], cfg.RANGE1[1])
+RANGE_LENG_MIN = min(cfg.RANGE1_LENG[0],cfg.RANGE2_LENG[0])
+RANGE_LENG_MAX = max(cfg.RANGE1_LENG[1],cfg.RANGE2_LENG[1])
+RANGE_AREA_MIN = min(cfg.RANGE1_AREA[0],cfg.RANGE2_AREA[0])
+RANGE_AREA_MAX = max(cfg.RANGE1_AREA[1],cfg.RANGE2_AREA[1])
 OBJ_IDX = 0
 CALIB_IDX = 1
 # VARIABLES
 enable_lens_corr = False # turn on for straighter lines
+
 len_obj = [0, 0, 0]
 len_obj_avg = 0
 len_obj_new = 0
 len_obj_mm = 0
+
+area_obj = [0, 0, 0]
+area_obj_avg = 0
+area_obj_new = 0
+area_obj_mm = 0
+
 ratio = cfg.RATIO_DEFAULT # [mm/pix]
 ratio_tmp = 0
 idx = OBJ_IDX 
@@ -349,21 +370,22 @@ def data_load():
 # DEFINES
 # for menu
 PAGE_INIT = 0
-PAGE_MEASURE = 1
+PAGE_LENG = 1
 PAGE_CALIB = 2
 PAGE_UPDATE = 3
+PAGE_AREA = 4
 FLAG_INIT = 0
 FLAG_MEASURE = 1
 FLAG_CALIB = 2
 FLAG_UPDATE = 3
+FLAG_AREA = 4
 # for state
 STT_RESET = 0
 STT_NEW = 1
 STT_LOW = 2
 STT_RANGE1 = 3
 STT_RANGE2 = 4
-STT_RANGE3 = 5
-STT_HIGH = 6
+STT_HIGH = 5
 
 # VARIABLES
 # for menu

@@ -14,7 +14,7 @@ import uasyncio
 # The below thresholds track in general red/green/blue things. You may wish to tune them...
 
 async def run():
-    ''' Implement algorithm for measure object size '''
+    ''' Implement algorithm for identify object size '''
     while True:
         img = sensor.snapshot() 
 
@@ -30,59 +30,104 @@ async def run():
             bsp.state = bsp.STT_RESET
         else:
             for blob in blobs:
-                major_len = math.sqrt(math.pow(blob.min_corners()[0][0] - blob.min_corners()[1][0], 2) + math.pow(blob.min_corners()[0][1] - blob.min_corners()[1][1], 2))
-                minor_len = math.sqrt(math.pow(blob.min_corners()[1][0] - blob.min_corners()[2][0], 2) + math.pow(blob.min_corners()[1][1] - blob.min_corners()[2][1], 2))
+                if bsp.menu == bsp.PAGE_LENG or bsp.menu == bsp.PAGE_INIT:
+                    major_len = math.sqrt(math.pow(blob.min_corners()[0][0] - blob.min_corners()[1][0], 2) + math.pow(blob.min_corners()[0][1] - blob.min_corners()[1][1], 2))
+                    minor_len = math.sqrt(math.pow(blob.min_corners()[1][0] - blob.min_corners()[2][0], 2) + math.pow(blob.min_corners()[1][1] - blob.min_corners()[2][1], 2))
 
-                bsp.len_obj[0] = bsp.len_obj[1]
-                bsp.len_obj[1] = bsp.len_obj[2]
-                # bsp.len_obj[2] = min(major_len, minor_len)
-                bsp.len_obj[2] = max(major_len, minor_len) # Get max for vertical projection of object
+                    bsp.len_obj[0] = bsp.len_obj[1]
+                    bsp.len_obj[1] = bsp.len_obj[2]
+                    # bsp.len_obj[2] = min(major_len, minor_len)
+                    bsp.len_obj[2] = max(major_len, minor_len) # Get max for vertical projection of object
 
-                if cfg.USE_DRAW:
-                    img.draw_line(blob.min_corners()[0][0], blob.min_corners()[0][1], blob.min_corners()[1][0], blob.min_corners()[1][1], color=cfg.COLORS[bsp.idx], thickness = 3)
-                    img.draw_line(blob.min_corners()[1][0], blob.min_corners()[1][1], blob.min_corners()[2][0], blob.min_corners()[2][1], color=cfg.COLORS[bsp.idx], thickness = 3) 
-                    img.draw_line(blob.min_corners()[2][0], blob.min_corners()[2][1], blob.min_corners()[3][0], blob.min_corners()[3][1], color=cfg.COLORS[bsp.idx], thickness = 3) 
-                    img.draw_line(blob.min_corners()[3][0], blob.min_corners()[3][1], blob.min_corners()[0][0], blob.min_corners()[0][1], color=cfg.COLORS[bsp.idx], thickness = 3)
+                    bsp.len_obj_avg = sum(bsp.len_obj) / len(bsp.len_obj)
+                    len_obj_lo = bsp.len_obj_avg - cfg.LEN_OBJ_DEL
+                    len_obj_hi = bsp.len_obj_avg + cfg.LEN_OBJ_DEL
 
-                bsp.len_obj_avg = sum(bsp.len_obj) / len(bsp.len_obj)
-                len_obj_lo = bsp.len_obj_avg - cfg.LEN_OBJ_DEL
-                len_obj_hi = bsp.len_obj_avg + cfg.LEN_OBJ_DEL
+                    if bsp.len_obj[0] <= len_obj_hi and bsp.len_obj[0] >= len_obj_lo \
+                        and bsp.len_obj[1] <= len_obj_hi and bsp.len_obj[1] >= len_obj_lo \
+                        and bsp.len_obj[2] <= len_obj_hi and bsp.len_obj[2] >= len_obj_lo:
 
-                if bsp.len_obj[0] <= len_obj_hi and bsp.len_obj[0] >= len_obj_lo \
-                    and bsp.len_obj[1] <= len_obj_hi and bsp.len_obj[1] >= len_obj_lo \
-                    and bsp.len_obj[2] <= len_obj_hi and bsp.len_obj[2] >= len_obj_lo:
+                        bsp.len_obj_new = bsp.len_obj_avg # save stable value
+                        bsp.state = bsp.STT_NEW
 
-                    bsp.len_obj_new = bsp.len_obj_avg # save stable value
-                    bsp.state = bsp.STT_NEW
+                        # if cfg.USE_PRINT:
+                        #     print(f'len_pix: {bsp.len_obj_new} pix')                    
+            
+                        if bsp.menu == bsp.PAGE_LENG:
+                            bsp.len_obj_mm = bsp.ratio * bsp.len_obj_new + cfg.LEN_OBJ_OFFSET_MM
 
-                    if cfg.USE_PRINT:
-                        print(f'len_pix: {bsp.len_obj_new} pix')                    
-        
-                    if bsp.menu == bsp.PAGE_MEASURE:
-                        bsp.len_obj_mm = bsp.ratio * bsp.len_obj_new + cfg.LEN_OBJ_OFFSET_MM
+                            if bsp.len_obj_mm < bsp.RANGE_LENG_MIN and bsp.len_obj_mm >= cfg.LEN_OBJ_MIN_MM:
+                                bsp.state = bsp.STT_LOW
+                            elif bsp.len_obj_mm < cfg.RANGE1_LENG[1] and bsp.len_obj_mm >= cfg.RANGE1_LENG[0]:
+                                bsp.state = bsp.STT_RANGE1 
+                            elif bsp.len_obj_mm < cfg.RANGE2_LENG[1] and bsp.len_obj_mm >= cfg.RANGE2_LENG[0]:
+                                bsp.state = bsp.STT_RANGE2 
+                            elif bsp.len_obj_mm < cfg.LEN_OBJ_MAX_MM and bsp.len_obj_mm >= bsp.RANGE_LENG_MAX:
+                                bsp.state = bsp.STT_HIGH 
+                            else:
+                                bsp.state = bsp.STT_RESET
+                            
+                            if cfg.USE_PRINT:
+                                print(f'len_mm: {bsp.len_obj_mm} mm')
 
-                        if bsp.len_obj_mm < bsp.RANGE_MIN and bsp.len_obj_mm >= cfg.LEN_OBJ_MIN_MM:
+                        elif bsp.menu == bsp.PAGE_CALIB:
+                            if blob.roundness() > 0.99:
+                                bsp.ratio_tmp = cfg.LEN_REF_MM / bsp.len_obj_new
+
+                                if cfg.USE_PRINT:
+                                    print(f'ratio: {bsp.ratio_tmp}')
+                        
+                    if cfg.USE_DRAW:
+                        img.draw_line(blob.min_corners()[0][0], blob.min_corners()[0][1], blob.min_corners()[1][0], blob.min_corners()[1][1], color=cfg.COLORS[bsp.idx], thickness = 3)
+                        img.draw_line(blob.min_corners()[1][0], blob.min_corners()[1][1], blob.min_corners()[2][0], blob.min_corners()[2][1], color=cfg.COLORS[bsp.idx], thickness = 3) 
+                        img.draw_line(blob.min_corners()[2][0], blob.min_corners()[2][1], blob.min_corners()[3][0], blob.min_corners()[3][1], color=cfg.COLORS[bsp.idx], thickness = 3) 
+                        img.draw_line(blob.min_corners()[3][0], blob.min_corners()[3][1], blob.min_corners()[0][0], blob.min_corners()[0][1], color=cfg.COLORS[bsp.idx], thickness = 3)
+                
+                elif bsp.menu == bsp.PAGE_AREA:
+                    
+                    bsp.area_obj[0] = bsp.area_obj[1]
+                    bsp.area_obj[1] = bsp.area_obj[2]
+                    bsp.area_obj[2] = blob.pixels()
+
+                    bsp.area_obj_avg = sum(bsp.area_obj) / len(bsp.area_obj)
+                    area_obj_lo = bsp.area_obj_avg - cfg.AREA_OBJ_DEL
+                    area_obj_hi = bsp.area_obj_avg + cfg.AREA_OBJ_DEL
+
+                    # if cfg.USE_PRINT:
+                    #         print(f'area_pix: {bsp.area_obj_avg} pix2')
+
+                    if bsp.area_obj[0] <= area_obj_hi and bsp.area_obj[0] >= area_obj_lo \
+                        and bsp.area_obj[1] <= area_obj_hi and bsp.area_obj[1] >= area_obj_lo \
+                        and bsp.area_obj[2] <= area_obj_hi and bsp.area_obj[2] >= area_obj_lo:
+
+                        bsp.area_obj_new = bsp.area_obj_avg # save stable value
+                        bsp.state = bsp.STT_NEW
+
+                        if cfg.USE_PRINT:
+                            print(f'area_pix: {bsp.area_obj_new} pix2')  
+
+                        bsp.area_obj_mm = bsp.ratio * bsp.ratio * bsp.area_obj_new + cfg.AREA_OBJ_OFFSET_MM
+
+                        if bsp.area_obj_mm < bsp.RANGE_AREA_MIN and bsp.area_obj_mm >= cfg.AREA_OBJ_MIN_MM:
                             bsp.state = bsp.STT_LOW
-                        elif bsp.len_obj_mm < cfg.RANGE1[1] and bsp.len_obj_mm >= cfg.RANGE1[0]:
+                        elif bsp.area_obj_mm < cfg.RANGE1_AREA[1] and bsp.area_obj_mm >= cfg.RANGE1_AREA[0]:
                             bsp.state = bsp.STT_RANGE1 
-                        elif bsp.len_obj_mm < cfg.RANGE2[1] and bsp.len_obj_mm >= cfg.RANGE2[0]:
+                        elif bsp.area_obj_mm < cfg.RANGE2_AREA[1] and bsp.area_obj_mm >= cfg.RANGE2_AREA[0]:
                             bsp.state = bsp.STT_RANGE2 
-                        # elif bsp.len_obj_mm < cfg.RANGE3[1] and bsp.len_obj_mm >= cfg.RANGE3[0]:
-                        #     bsp.state = bsp.STT_RANGE3
-                        elif bsp.len_obj_mm < cfg.LEN_OBJ_MAX_MM and bsp.len_obj_mm >= cfg.RANGE2[1]:
+                        elif bsp.area_obj_mm < cfg.AREA_OBJ_MAX_MM and bsp.area_obj_mm >= bsp.RANGE_AREA_MAX:
                             bsp.state = bsp.STT_HIGH 
                         else:
                             bsp.state = bsp.STT_RESET
                         
                         if cfg.USE_PRINT:
-                            print(f'len_mm: {bsp.len_obj_mm} mm')
+                            print(f'area_mm: {bsp.area_obj_mm} mm2') 
+                        
+                    
+                    if cfg.USE_DRAW:
+                        img.draw_rectangle(blob.rect(), color=cfg.COLORS[bsp.idx], thickness = 3)
 
-                    elif bsp.menu == bsp.PAGE_CALIB:
-                        if blob.roundness() > 0.99:
-                            bsp.ratio_tmp = cfg.LEN_REF_MM / bsp.len_obj_new
-
-                            if cfg.USE_PRINT:
-                                print(f'ratio: {bsp.ratio_tmp}')
+                else:
+                    pass
 
         await uasyncio.sleep_ms(cfg.SEN_CYCLE)   
 

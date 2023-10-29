@@ -92,3 +92,5 @@
 - V0.1:
   - Thực hiện thành công frozen đồng bộ với `v0.8` source code `caculate-object-size-project`
   - git `v0.1`
+- V0.2: 
+  - Bổ sung đo diện tích 
